@@ -21,7 +21,7 @@ error() {
 cat_subs() {
     subs=$1
     if [ -f "$subs" ]; then
-        ffmpeg -y -loglevel fatal -i "$subs" -f ass -
+        ffmpeg -y -loglevel fatal -fix_sub_duration -i "$subs" -f ass -
     else
         subs_id=$(ffprobe "$file" 2>&1 | grep "Stream .*Subtitle" \
                   | sed -n "${subs:-1}p" | grep -o '[0-9]:[0-9]')
