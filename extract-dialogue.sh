@@ -26,7 +26,7 @@ cat_subs() {
         subs_id=$(ffprobe "$file" 2>&1 | grep "Stream .*Subtitle" \
                   | sed -n "${subs:-1}p" | grep -o '[0-9]:[0-9]')
         [ -z "$subs_id" ] && error "No text-based subtitles found in '$file'."
-        ffmpeg -loglevel fatal -i "$file" -map $subs_id -f ass -
+        ffmpeg -loglevel fatal -fix_sub_duration -i "$file" -map $subs_id -f ass -
     fi
 }
 
@@ -43,25 +43,6 @@ extract_timestamps() {
         ( $4 * 3600000 ) + ( $5 * 60000 ) + ($6 * 1000) + p }'
 }
 
-merge_timestamps() {
-    # Merges overlapping intervals from standard input
-    cur_begin=
-    cur_end=
-    while IFS=: read -r begin end; do
-        if [ -z "$cur_begin" ]; then
-            cur_begin=$begin
-            cur_end=$end
-        elif [ "$cur_end" -lt "$begin" ]; then
-            echo "$cur_begin:$cur_end"
-            cur_begin=$begin
-            cur_end=$end
-        elif [ "$cur_end" -lt "$end" ]; then
-            cur_end=$end
-        fi
-    done
-    echo "$cur_begin:$cur_end"
-}
-
 while [ -n "$1" ]; do
     case "$1" in
         "-i") shift; file=$1    ;;
@@ -75,8 +56,7 @@ while [ -n "$1" ]; do
     shift
 done
 
-timestamps=$(cat_subs "$subs" | extract_timestamps "${padding:-100}" | merge_timestamps \
-    | awk -F: '{ printf "%.3f:%.3f\n", ( $1 / 1000 ), ( $2 / 1000 ) }')
+timestamps=$(cat_subs "$subs" | extract_timestamps "${padding:-100}" | awk -F: '{ printf "%.3f:%.3f\n", ( $1 / 1000 ), ( $2 / 1000 ) }')
 audio_id=$(ffprobe "$file" 2>&1 | grep "Stream .*Audio" \
            | sed -n "${audio:-1}p" | grep -o '[0-9]:[0-9]')
 
